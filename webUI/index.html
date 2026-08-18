@@ -4,24 +4,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PHANTOM DAEMON // SYSTEM MONITOR</title>
+  <title>phantom_daemon // proc watch</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
-    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;600;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap"
     rel="stylesheet">
 
   <style>
     :root {
-      --bg: #020202;
-      --panel-bg: #080808;
-      --border: #222222;
-      --border-bright: #ffffff;
-      --text: #f0f0f0;
-      --text-dim: #666666;
-      --accent: #d0ff00;
-      --font-serif: 'Instrument Serif', serif;
+      --bg: #06080a;
+      --panel-bg: #0b0e0d;
+      --border: #1a201c;
+      --border-bright: #3c463f;
+      --text: #d3ddd0;
+      --text-dim: #5c6a5f;
+      --accent: #8fbf8f;
+      --accent-alt: #cfd4c2;
+      --warn: #d9a545;
+      --crit: #c1544a;
+      --font-display: 'Space Mono', monospace;
       --font-mono: 'JetBrains Mono', monospace;
     }
 
@@ -40,106 +43,163 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      padding: 24px;
-      gap: 24px;
+      padding: 22px;
+      gap: 20px;
+      position: relative;
+    }
+
+    /* faint scanline texture — kept deliberately subtle */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.018) 0px,
+        rgba(255, 255, 255, 0.018) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      z-index: 50;
+      mix-blend-mode: overlay;
     }
 
     header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      border-bottom: 2px solid var(--border-bright);
-      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-bright);
+      padding-bottom: 14px;
     }
 
     .brand-group {
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 4px;
     }
 
     .brand-sub {
+      font-family: var(--font-mono);
       font-size: 10px;
-      letter-spacing: 3px;
+      letter-spacing: 2.5px;
       color: var(--text-dim);
       text-transform: uppercase;
-      margin-bottom: 2px;
     }
 
     h1 {
-      font-family: var(--font-serif);
-      font-size: 3.8rem;
-      font-weight: 400;
-      line-height: 0.85;
-      letter-spacing: -1px;
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
       color: var(--text);
+      text-transform: lowercase;
     }
 
-    h1 span {
-      font-style: italic;
+    .cursor-blink {
+      display: inline-block;
+      color: var(--accent);
+      animation: blink 1.1s steps(1) infinite;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    .session-line {
+      font-size: 10.5px;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      margin-top: 2px;
+    }
+
+    .session-line span {
       color: var(--accent);
     }
 
     .status-block {
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-size: 11px;
-      letter-spacing: 1px;
+      gap: 10px;
+      font-size: 10.5px;
+      letter-spacing: 1.5px;
+      font-family: var(--font-mono);
     }
 
     .status-indicator {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       background: var(--text-dim);
+      border: 1px solid var(--border-bright);
     }
 
     .status-indicator.connected {
       background: var(--accent);
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 0 6px rgba(143, 191, 143, 0.6);
     }
 
     main {
       flex: 1;
       display: grid;
       grid-template-columns: 2.2fr 1fr;
-      grid-template-rows: 1fr 140px;
-      gap: 24px;
+      grid-template-rows: 1fr 132px;
+      gap: 20px;
+      min-height: 0;
     }
 
     .panel {
       background: var(--panel-bg);
       border: 1px solid var(--border);
-      padding: 16px;
+      padding: 14px;
       display: flex;
       flex-direction: column;
       position: relative;
     }
 
     .panel-hero {
-      border: 1px solid var(--border-bright);
+      border-color: var(--border-bright);
     }
 
     .panel-header {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 8px;
+      gap: 12px;
     }
 
     .panel-title {
-      font-family: var(--font-serif);
-      font-size: 1.5rem;
-      font-weight: 400;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
       color: var(--text);
+      text-transform: uppercase;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .panel-tag {
+      font-family: var(--font-display);
+      font-size: 10px;
+      color: var(--accent);
+      opacity: 0.85;
     }
 
     .metric-readout {
-      font-size: 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    .metric-readout b {
       color: var(--accent);
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .graph-wrapper {
@@ -162,36 +222,29 @@
     .graph-tooltip {
       position: absolute;
       pointer-events: none;
-      background-color: #000;
-      border: 1px solid var(--accent);
-      padding: 6px 10px;
+      background-color: #050605;
+      border: 1px solid var(--border-bright);
+      padding: 5px 9px;
       color: var(--text);
+      font-size: 10.5px;
       z-index: 10;
       display: none;
-      box-shadow: 4px 4px 0px rgba(208, 255, 0, 0.2);
     }
 
     .secondary-stack {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
 
     .mini-panel {
       flex: 1;
       background: var(--panel-bg);
       border: 1px solid var(--border);
-      padding: 12px;
+      padding: 10px 12px;
       display: flex;
       flex-direction: column;
-    }
-
-    .mini-panel .panel-title {
-      font-size: 1.1rem;
-    }
-
-    .stat-row span.highlight {
-      color: var(--text);
+      min-height: 0;
     }
 
     .full-width {
@@ -200,14 +253,14 @@
 
     .core-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+      gap: 7px;
       height: 100%;
     }
 
     .core-node {
       border: 1px solid var(--border);
-      padding: 8px;
+      padding: 7px 8px;
       background: var(--bg);
       display: flex;
       flex-direction: column;
@@ -216,20 +269,22 @@
     }
 
     .core-node:hover {
-      border-color: var(--accent);
+      border-color: var(--border-bright);
     }
 
     .core-label {
-      font-size: 9px;
+      font-size: 8.5px;
       color: var(--text-dim);
       letter-spacing: 1px;
+      font-family: var(--font-mono);
     }
 
     .core-val {
-      font-size: 14px;
-      font-weight: 600;
+      font-size: 13px;
+      font-weight: 500;
       color: var(--text);
-      margin-top: 4px;
+      margin-top: 3px;
+      font-family: var(--font-mono);
     }
 
     .core-bar-track {
@@ -243,7 +298,12 @@
       height: 100%;
       background: var(--accent);
       width: 0%;
-      transition: width 0.1s linear;
+      transition: width 0.12s linear, background-color 0.2s ease;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .cursor-blink { animation: none; opacity: 1; }
+      body::after { display: none; }
     }
   </style>
 </head>
@@ -252,21 +312,21 @@
 
   <header>
     <div class="brand-group">
-      <div class="brand-sub">TELEMETRY DAEMON // REAL-TIME SYSTEM MONITOR</div>
-      <h1>Phantom <span>Daemon</span></h1>
+      <div class="brand-sub">local proc watch · ws://127.0.0.1:8765</div>
+      <h1>phantom_daemon<span class="cursor-blink">_</span></h1>
     </div>
     <div class="status-block">
       <div id="statusDot" class="status-indicator"></div>
-      <span id="connStatus">OFFLINE</span>
+      <span id="connStatus">SOCKET CLOSED</span>
     </div>
   </header>
 
   <main>
     <div class="panel panel-hero">
       <div class="panel-header">
-        <div class="panel-title">01 / Processor & Dynamic Temperature History</div>
+        <div class="panel-title"><span class="panel-tag">01</span>processor &amp; temp</div>
         <div class="metric-readout">
-          CPU: <span id="cpuVal">0%</span> | TEMP: <span id="tempVal">--°C</span>
+          cpu <b id="cpuVal">0%</b> &nbsp;/&nbsp; pkg <b id="tempVal">--°C</b>
         </div>
       </div>
       <div class="graph-wrapper">
@@ -278,8 +338,8 @@
     <div class="secondary-stack">
       <div class="mini-panel">
         <div class="panel-header">
-          <div class="panel-title">02 / Memory Allocation</div>
-          <div class="metric-readout" id="ramVal">0%</div>
+          <div class="panel-title"><span class="panel-tag">02</span>memory</div>
+          <div class="metric-readout"><b id="ramVal">0%</b></div>
         </div>
         <div class="graph-wrapper">
           <canvas id="ramGraph"></canvas>
@@ -289,8 +349,8 @@
 
       <div class="mini-panel">
         <div class="panel-header">
-          <div class="panel-title">03 / Network Traffic</div>
-          <div class="metric-readout" id="netVal">0 KB/s</div>
+          <div class="panel-title"><span class="panel-tag">03</span>network</div>
+          <div class="metric-readout"><b id="netVal">0 KB/s</b></div>
         </div>
         <div class="graph-wrapper">
           <canvas id="netGraph"></canvas>
@@ -300,8 +360,8 @@
 
       <div class="mini-panel">
         <div class="panel-header">
-          <div class="panel-title">04 / Disk Throughput</div>
-          <div class="metric-readout" id="diskVal">0 MB/s</div>
+          <div class="panel-title"><span class="panel-tag">04</span>disk io</div>
+          <div class="metric-readout"><b id="diskVal">0 MB/s</b></div>
         </div>
         <div class="graph-wrapper">
           <canvas id="diskGraph"></canvas>
@@ -312,13 +372,19 @@
 
     <div class="panel full-width">
       <div class="panel-header">
-        <div class="panel-title">05 / Multi-Core Topology Load Distribution</div>
+        <div class="panel-title"><span class="panel-tag">05</span>core topology, load by thread</div>
       </div>
       <div id="coreGrid" class="core-container"></div>
     </div>
   </main>
 
   <script>
+    function loadColor(pct) {
+      if (pct >= 85) return '#c1544a';
+      if (pct >= 60) return '#d9a545';
+      return '#8fbf8f';
+    }
+
     class TimeSeriesGraph {
       constructor(canvas, tooltipEl, maxPoints = 60, yMin = 0, yMax = 100, autoScale = false, unit = '') {
         this.canvas = canvas;
@@ -331,6 +397,8 @@
         this.unit = unit;
         this.series = [];
         this.hoverX = null;
+        this.lastFrameTime = performance.now();
+
         this.canvas.addEventListener('mousemove', (e) => {
           const rect = this.canvas.getBoundingClientRect();
           this.hoverX = e.clientX - rect.left;
@@ -340,7 +408,6 @@
           this.hoverX = null;
           if (this.tooltip) this.tooltip.style.display = 'none';
         });
-
       }
 
       addSeries(label, color, fill = false) {
@@ -361,7 +428,6 @@
           if (this.series[seriesIndex].targetData.length > this.maxPoints) {
             this.series[seriesIndex].targetData.shift();
           }
-
           while (this.series[seriesIndex].currentData.length < this.series[seriesIndex].targetData.length) {
             this.series[seriesIndex].currentData.push(value);
           }
@@ -386,12 +452,31 @@
         this.canvas.height = this.canvas.parentElement.clientHeight;
       }
 
-      updateInterpolation(lerpFactor = 0.05) {
+      updateInterpolation() {
+        const now = performance.now();
+        const dt = Math.min((now - this.lastFrameTime) / 1000, 0.1);
+        this.lastFrameTime = now;
+        const rate = 7; // higher = snappier, lower = silkier
+        const factor = 1 - Math.exp(-rate * dt);
+
         this.series.forEach(s => {
           for (let i = 0; i < s.targetData.length; i++) {
-            s.currentData[i] += (s.targetData[i] - s.currentData[i]) * lerpFactor;
+            s.currentData[i] += (s.targetData[i] - s.currentData[i]) * factor;
           }
         });
+      }
+
+      _tracePath(points) {
+        this.ctx.beginPath();
+        if (points.length < 2) return;
+        this.ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length - 1; i++) {
+          const midX = (points[i].x + points[i + 1].x) / 2;
+          const midY = (points[i].y + points[i + 1].y) / 2;
+          this.ctx.quadraticCurveTo(points[i].x, points[i].y, midX, midY);
+        }
+        const last = points[points.length - 1];
+        this.ctx.lineTo(last.x, last.y);
       }
 
       draw() {
@@ -400,7 +485,7 @@
         const h = this.canvas.height;
         this.ctx.clearRect(0, 0, w, h);
 
-        this.ctx.strokeStyle = '#141414';
+        this.ctx.strokeStyle = '#12160f';
         this.ctx.lineWidth = 1;
         this.ctx.beginPath();
         for (let y = 0; y <= h; y += h / 3) {
@@ -418,27 +503,23 @@
         this.series.forEach(s => {
           if (s.currentData.length < 2) return;
 
-          this.ctx.strokeStyle = s.color;
-          this.ctx.lineWidth = 1.5;
-          this.ctx.beginPath();
-
-          s.currentData.forEach((val, i) => {
+          const points = s.currentData.map((val, i) => {
             const norm = (val - this.yMin) / (this.yMax - this.yMin || 1);
             const clamped = Math.max(0, Math.min(1, norm));
-            const x = i * step;
-            const y = h - (clamped * h);
-
-            if (i === 0) this.ctx.moveTo(x, y);
-            else this.ctx.lineTo(x, y);
+            return { x: i * step, y: h - (clamped * h) };
           });
 
+          this._tracePath(points);
+          this.ctx.strokeStyle = s.color;
+          this.ctx.lineWidth = 1.4;
+          this.ctx.lineJoin = 'round';
           this.ctx.stroke();
 
           if (s.fill) {
             this.ctx.lineTo(w, h);
             this.ctx.lineTo(0, h);
             this.ctx.closePath();
-            this.ctx.fillStyle = s.color + '12';
+            this.ctx.fillStyle = s.color + '14';
             this.ctx.fill();
           }
         });
@@ -448,7 +529,7 @@
           const clampedIndex = Math.max(0, Math.min(this.maxPoints - 1, hoveredIndex));
           const snapX = clampedIndex * step;
 
-          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          this.ctx.strokeStyle = 'rgba(211, 221, 208, 0.3)';
           this.ctx.lineWidth = 1;
           this.ctx.setLineDash([2, 2]);
           this.ctx.beginPath();
@@ -466,7 +547,7 @@
 
             this.ctx.fillStyle = s.color;
             this.ctx.beginPath();
-            this.ctx.arc(snapX, snapY, 4, 0, Math.PI * 2);
+            this.ctx.arc(snapX, snapY, 3.5, 0, Math.PI * 2);
             this.ctx.fill();
 
             tooltipText.push(`${s.label}: <b>${rawVal}${this.unit}</b>`);
@@ -480,7 +561,7 @@
             const tooltipX = snapX + tooltipWidth + 12 > w ? snapX - tooltipWidth - 12 : snapX + 12;
 
             this.tooltip.style.left = `${tooltipX}px`;
-            this.tooltip.style.top = `12px`;
+            this.tooltip.style.top = `10px`;
           }
         }
       }
@@ -493,13 +574,13 @@
       disk: new TimeSeriesGraph(document.getElementById('diskGraph'), document.getElementById('diskTooltip'), 50, 0, 10, true, ' MB/s')
     };
 
-    const cpuSeriesIdx = graphs.cpu.addSeries('CPU Load', '#d0ff00', true);
-    const tempSeriesIdx = graphs.cpu.addSeries('Temp', '#ffffff', false);
-    const ramSeriesIdx = graphs.ram.addSeries('RAM Usage', '#d0ff00', true);
-    const rxSeriesIdx = graphs.net.addSeries('Download', '#d0ff00', true);
-    const txSeriesIdx = graphs.net.addSeries('Upload', '#ffffff', false);
-    const readSeriesIdx = graphs.disk.addSeries('Disk Read', '#d0ff00', true);
-    const writeSeriesIdx = graphs.disk.addSeries('Disk Write', '#ffffff', false);
+    const cpuSeriesIdx = graphs.cpu.addSeries('cpu load', '#8fbf8f', true);
+    const tempSeriesIdx = graphs.cpu.addSeries('temp', '#cfd4c2', false);
+    const ramSeriesIdx = graphs.ram.addSeries('ram usage', '#8fbf8f', true);
+    const rxSeriesIdx = graphs.net.addSeries('down', '#8fbf8f', true);
+    const txSeriesIdx = graphs.net.addSeries('up', '#cfd4c2', false);
+    const readSeriesIdx = graphs.disk.addSeries('read', '#8fbf8f', true);
+    const writeSeriesIdx = graphs.disk.addSeries('write', '#cfd4c2', false);
 
     function resizeAll() {
       Object.values(graphs).forEach(g => g.resize());
@@ -525,12 +606,12 @@
     const diskVal = document.getElementById('diskVal');
 
     ws.onopen = () => {
-      connStatus.textContent = 'ONLINE';
+      connStatus.textContent = 'SOCKET OPEN';
       statusDot.classList.add('connected');
     };
 
     ws.onclose = () => {
-      connStatus.textContent = 'OFFLINE';
+      connStatus.textContent = 'SOCKET CLOSED';
       statusDot.classList.remove('connected');
     };
 
@@ -560,7 +641,7 @@
           const div = document.createElement('div');
           div.className = 'core-node';
           div.innerHTML = `
-            <div class="core-label">CORE 0${i}</div>
+            <div class="core-label">thread ${String(i).padStart(2, '0')}</div>
             <div class="core-val" id="coreVal${i}">0%</div>
             <div class="core-bar-track"><div id="coreBar${i}" class="core-bar-fill"></div></div>
           `;
@@ -572,7 +653,10 @@
         const valElem = document.getElementById(`coreVal${i}`);
         const barElem = document.getElementById(`coreBar${i}`);
         if (valElem) valElem.textContent = `${val}%`;
-        if (barElem) barElem.style.width = `${val}%`;
+        if (barElem) {
+          barElem.style.width = `${val}%`;
+          barElem.style.backgroundColor = loadColor(val);
+        }
       });
     };
   </script>
