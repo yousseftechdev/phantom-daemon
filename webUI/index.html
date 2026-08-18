@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PHANTOM DAEMON // SYSTEM MONITOR</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@300;400;600;800&display=swap"
+    rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #020202;
+      --panel-bg: #080808;
+      --border: #222222;
+      --border-bright: #ffffff;
+      --text: #f0f0f0;
+      --text-dim: #666666;
+      --accent: #d0ff00;
+      --font-serif: 'Instrument Serif', serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      border-radius: 0px !important;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 24px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 2px solid var(--border-bright);
+      padding-bottom: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    h1 {
+      font-family: var(--font-serif);
+      font-size: 3.8rem;
+      font-weight: 400;
+      line-height: 0.85;
+      letter-spacing: -1px;
+      color: var(--text);
+    }
+
+    h1 span {
+      font-style: italic;
+      color: var(--accent);
+    }
+
+    .status-block {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      background: var(--text-dim);
+    }
+
+    .status-indicator.connected {
+      background: var(--accent);
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      grid-template-rows: 1fr 140px;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .panel-hero {
+      border: 1px solid var(--border-bright);
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    .panel-title {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--text);
+    }
+
+    .metric-readout {
+      font-size: 12px;
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .graph-wrapper {
+      flex: 1;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg);
+    }
+
+    .graph-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background-color: #000;
+      border: 1px solid var(--accent);
+      padding: 6px 10px;
+      color: var(--text);
+      z-index: 10;
+      display: none;
+      box-shadow: 4px 4px 0px rgba(208, 255, 0, 0.2);
+    }
+
+    .secondary-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mini-panel {
+      flex: 1;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mini-panel .panel-title {
+      font-size: 1.1rem;
+    }
+
+    .stat-row span.highlight {
+      color: var(--text);
+    }
+
+    .full-width {
+      grid-column: span 2;
+    }
+
+    .core-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+      gap: 8px;
+      height: 100%;
+    }
+
+    .core-node {
+      border: 1px solid var(--border);
+      padding: 8px;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.15s ease;
+    }
+
+    .core-node:hover {
+      border-color: var(--accent);
+    }
+
+    .core-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .core-val {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 4px;
+    }
+
+    .core-bar-track {
+      height: 2px;
+      background: var(--border);
+      margin-top: 6px;
+      width: 100%;
+    }
+
+    .core-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      width: 0%;
+      transition: width 0.1s linear;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="brand-group">
+      <div class="brand-sub">TELEMETRY DAEMON // REAL-TIME SYSTEM MONITOR</div>
+      <h1>Phantom <span>Daemon</span></h1>
+    </div>
+    <div class="status-block">
+      <div id="statusDot" class="status-indicator"></div>
+      <span id="connStatus">OFFLINE</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="panel panel-hero">
+      <div class="panel-header">
+        <div class="panel-title">01 / Processor & Dynamic Temperature History</div>
+        <div class="metric-readout">
+          CPU: <span id="cpuVal">0%</span> | TEMP: <span id="tempVal">--°C</span>
+        </div>
+      </div>
+      <div class="graph-wrapper">
+        <canvas id="cpuGraph"></canvas>
+        <div id="cpuTooltip" class="graph-tooltip"></div>
+      </div>
+    </div>
+
+    <div class="secondary-stack">
+      <div class="mini-panel">
+        <div class="panel-header">
+          <div class="panel-title">02 / Memory Allocation</div>
+          <div class="metric-readout" id="ramVal">0%</div>
+        </div>
+        <div class="graph-wrapper">
+          <canvas id="ramGraph"></canvas>
+          <div id="ramTooltip" class="graph-tooltip"></div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <div class="panel-header">
+          <div class="panel-title">03 / Network Traffic</div>
+          <div class="metric-readout" id="netVal">0 KB/s</div>
+        </div>
+        <div class="graph-wrapper">
+          <canvas id="netGraph"></canvas>
+          <div id="netTooltip" class="graph-tooltip"></div>
+        </div>
+      </div>
+
+      <div class="mini-panel">
+        <div class="panel-header">
+          <div class="panel-title">04 / Disk Throughput</div>
+          <div class="metric-readout" id="diskVal">0 MB/s</div>
+        </div>
+        <div class="graph-wrapper">
+          <canvas id="diskGraph"></canvas>
+          <div id="diskTooltip" class="graph-tooltip"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel full-width">
+      <div class="panel-header">
+        <div class="panel-title">05 / Multi-Core Topology Load Distribution</div>
+      </div>
+      <div id="coreGrid" class="core-container"></div>
+    </div>
+  </main>
+
+  <script>
+    class TimeSeriesGraph {
+      constructor(canvas, tooltipEl, maxPoints = 60, yMin = 0, yMax = 100, autoScale = false, unit = '') {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.tooltip = tooltipEl;
+        this.maxPoints = maxPoints;
+        this.yMin = yMin;
+        this.yMax = yMax;
+        this.autoScale = autoScale;
+        this.unit = unit;
+        this.series = [];
+        this.hoverX = null;
+        this.canvas.addEventListener('mousemove', (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          this.hoverX = e.clientX - rect.left;
+        });
+
+        this.canvas.addEventListener('mouseleave', () => {
+          this.hoverX = null;
+          if (this.tooltip) this.tooltip.style.display = 'none';
+        });
+
+      }
+
+      addSeries(label, color, fill = false) {
+        const s = {
+          label: label,
+          color: color,
+          fill: fill,
+          currentData: new Array(this.maxPoints).fill(0),
+          targetData: new Array(this.maxPoints).fill(0)
+        };
+        this.series.push(s);
+        return this.series.length - 1;
+      }
+
+      pushData(seriesIndex, value) {
+        if (this.series[seriesIndex]) {
+          this.series[seriesIndex].targetData.push(value);
+          if (this.series[seriesIndex].targetData.length > this.maxPoints) {
+            this.series[seriesIndex].targetData.shift();
+          }
+
+          while (this.series[seriesIndex].currentData.length < this.series[seriesIndex].targetData.length) {
+            this.series[seriesIndex].currentData.push(value);
+          }
+          while (this.series[seriesIndex].currentData.length > this.maxPoints) {
+            this.series[seriesIndex].currentData.shift();
+          }
+        }
+
+        if (this.autoScale) {
+          let maxObserved = 10;
+          this.series.forEach(s => {
+            const sMax = Math.max(...s.targetData);
+            if (sMax > maxObserved) maxObserved = sMax;
+          });
+          this.yMax = maxObserved * 1.2;
+        }
+      }
+
+      resize() {
+        if (!this.canvas.parentElement) return;
+        this.canvas.width = this.canvas.parentElement.clientWidth;
+        this.canvas.height = this.canvas.parentElement.clientHeight;
+      }
+
+      updateInterpolation(lerpFactor = 0.05) {
+        this.series.forEach(s => {
+          for (let i = 0; i < s.targetData.length; i++) {
+            s.currentData[i] += (s.targetData[i] - s.currentData[i]) * lerpFactor;
+          }
+        });
+      }
+
+      draw() {
+        this.updateInterpolation();
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        this.ctx.clearRect(0, 0, w, h);
+
+        this.ctx.strokeStyle = '#141414';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        for (let y = 0; y <= h; y += h / 3) {
+          this.ctx.moveTo(0, y);
+          this.ctx.lineTo(w, y);
+        }
+        for (let x = 0; x <= w; x += w / 6) {
+          this.ctx.moveTo(x, 0);
+          this.ctx.lineTo(x, h);
+        }
+        this.ctx.stroke();
+
+        const step = w / (this.maxPoints - 1);
+
+        this.series.forEach(s => {
+          if (s.currentData.length < 2) return;
+
+          this.ctx.strokeStyle = s.color;
+          this.ctx.lineWidth = 1.5;
+          this.ctx.beginPath();
+
+          s.currentData.forEach((val, i) => {
+            const norm = (val - this.yMin) / (this.yMax - this.yMin || 1);
+            const clamped = Math.max(0, Math.min(1, norm));
+            const x = i * step;
+            const y = h - (clamped * h);
+
+            if (i === 0) this.ctx.moveTo(x, y);
+            else this.ctx.lineTo(x, y);
+          });
+
+          this.ctx.stroke();
+
+          if (s.fill) {
+            this.ctx.lineTo(w, h);
+            this.ctx.lineTo(0, h);
+            this.ctx.closePath();
+            this.ctx.fillStyle = s.color + '12';
+            this.ctx.fill();
+          }
+        });
+
+        if (this.hoverX !== null) {
+          const hoveredIndex = Math.round(this.hoverX / step);
+          const clampedIndex = Math.max(0, Math.min(this.maxPoints - 1, hoveredIndex));
+          const snapX = clampedIndex * step;
+
+          this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          this.ctx.lineWidth = 1;
+          this.ctx.setLineDash([2, 2]);
+          this.ctx.beginPath();
+          this.ctx.moveTo(snapX, 0);
+          this.ctx.lineTo(snapX, h);
+          this.ctx.stroke();
+          this.ctx.setLineDash([]);
+
+          let tooltipText = [];
+
+          this.series.forEach(s => {
+            const rawVal = s.targetData[clampedIndex] !== undefined ? s.targetData[clampedIndex] : 0;
+            const norm = (s.currentData[clampedIndex] - this.yMin) / (this.yMax - this.yMin || 1);
+            const snapY = h - (Math.max(0, Math.min(1, norm)) * h);
+
+            this.ctx.fillStyle = s.color;
+            this.ctx.beginPath();
+            this.ctx.arc(snapX, snapY, 4, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            tooltipText.push(`${s.label}: <b>${rawVal}${this.unit}</b>`);
+          });
+
+          if (this.tooltip) {
+            this.tooltip.style.display = 'block';
+            this.tooltip.innerHTML = tooltipText.join('<br>');
+
+            const tooltipWidth = this.tooltip.offsetWidth;
+            const tooltipX = snapX + tooltipWidth + 12 > w ? snapX - tooltipWidth - 12 : snapX + 12;
+
+            this.tooltip.style.left = `${tooltipX}px`;
+            this.tooltip.style.top = `12px`;
+          }
+        }
+      }
+    }
+
+    const graphs = {
+      cpu: new TimeSeriesGraph(document.getElementById('cpuGraph'), document.getElementById('cpuTooltip'), 80, 0, 100, false, ''),
+      ram: new TimeSeriesGraph(document.getElementById('ramGraph'), document.getElementById('ramTooltip'), 50, 0, 100, false, '%'),
+      net: new TimeSeriesGraph(document.getElementById('netGraph'), document.getElementById('netTooltip'), 50, 0, 100, true, ' KB/s'),
+      disk: new TimeSeriesGraph(document.getElementById('diskGraph'), document.getElementById('diskTooltip'), 50, 0, 10, true, ' MB/s')
+    };
+
+    const cpuSeriesIdx = graphs.cpu.addSeries('CPU Load', '#d0ff00', true);
+    const tempSeriesIdx = graphs.cpu.addSeries('Temp', '#ffffff', false);
+    const ramSeriesIdx = graphs.ram.addSeries('RAM Usage', '#d0ff00', true);
+    const rxSeriesIdx = graphs.net.addSeries('Download', '#d0ff00', true);
+    const txSeriesIdx = graphs.net.addSeries('Upload', '#ffffff', false);
+    const readSeriesIdx = graphs.disk.addSeries('Disk Read', '#d0ff00', true);
+    const writeSeriesIdx = graphs.disk.addSeries('Disk Write', '#ffffff', false);
+
+    function resizeAll() {
+      Object.values(graphs).forEach(g => g.resize());
+    }
+    window.addEventListener('resize', resizeAll);
+    setTimeout(resizeAll, 50);
+
+    function renderLoop() {
+      requestAnimationFrame(renderLoop);
+      Object.values(graphs).forEach(g => g.draw());
+    }
+    renderLoop();
+
+    const ws = new WebSocket('ws://127.0.0.1:8765');
+    const connStatus = document.getElementById('connStatus');
+    const statusDot = document.getElementById('statusDot');
+    const coreGrid = document.getElementById('coreGrid');
+
+    const cpuVal = document.getElementById('cpuVal');
+    const tempVal = document.getElementById('tempVal');
+    const ramVal = document.getElementById('ramVal');
+    const netVal = document.getElementById('netVal');
+    const diskVal = document.getElementById('diskVal');
+
+    ws.onopen = () => {
+      connStatus.textContent = 'ONLINE';
+      statusDot.classList.add('connected');
+    };
+
+    ws.onclose = () => {
+      connStatus.textContent = 'OFFLINE';
+      statusDot.classList.remove('connected');
+    };
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      graphs.cpu.pushData(cpuSeriesIdx, data.cpu.total);
+      if (data.temperature && data.temperature.package !== null) {
+        graphs.cpu.pushData(tempSeriesIdx, data.temperature.package);
+        tempVal.textContent = `${data.temperature.package}°C`;
+      }
+
+      graphs.ram.pushData(ramSeriesIdx, data.ram.percent);
+      graphs.net.pushData(rxSeriesIdx, data.network.rx_kbps);
+      graphs.net.pushData(txSeriesIdx, data.network.tx_kbps);
+      graphs.disk.pushData(readSeriesIdx, data.disk.read_mbps);
+      graphs.disk.pushData(writeSeriesIdx, data.disk.write_mbps);
+
+      cpuVal.textContent = `${data.cpu.total}%`;
+      ramVal.textContent = `${data.ram.percent}%`;
+      netVal.textContent = `${data.network.rx_kbps} KB/s`;
+      diskVal.textContent = `${data.disk.read_mbps} MB/s`;
+
+      if (coreGrid.children.length !== data.cpu.cores.length) {
+        coreGrid.innerHTML = '';
+        data.cpu.cores.forEach((_, i) => {
+          const div = document.createElement('div');
+          div.className = 'core-node';
+          div.innerHTML = `
+            <div class="core-label">CORE 0${i}</div>
+            <div class="core-val" id="coreVal${i}">0%</div>
+            <div class="core-bar-track"><div id="coreBar${i}" class="core-bar-fill"></div></div>
+          `;
+          coreGrid.appendChild(div);
+        });
+      }
+
+      data.cpu.cores.forEach((val, i) => {
+        const valElem = document.getElementById(`coreVal${i}`);
+        const barElem = document.getElementById(`coreBar${i}`);
+        if (valElem) valElem.textContent = `${val}%`;
+        if (barElem) barElem.style.width = `${val}%`;
+      });
+    };
+  </script>
+</body>
+
+</html>
